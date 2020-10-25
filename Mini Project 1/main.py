@@ -74,7 +74,7 @@ if __name__ == "__main__":
     c = conn.cursor()
 
     user = start()
-
+    user.menu()
     # c.execute(''' ''')
     # c.execute("SELECT * FROM movie WHERE movie_number=:num and year=:year",
     # {"num":movie_number, "year": movie_year} )
