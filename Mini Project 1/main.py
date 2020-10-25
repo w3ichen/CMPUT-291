@@ -35,11 +35,11 @@ def start():
             c.execute('SELECT * FROM privileged WHERE uid=:uid',{'uid':uid})
             if (c.fetchone() == None):
                 # not a privileged user
-                return User(uid, user[1])
+                return User(c, conn, uid, user[1])
             else:
                 # is a privileged user
                 print("Access: Privileged")
-                return Privileged(uid, user[1])
+                return Privileged(c, conn, uid, user[1])
 
     elif option == "2":
         # unregistered user
@@ -55,16 +55,15 @@ def start():
                         VALUES(:uid, :name, :city, :pwd, :crdate);''',
                 { 'uid':uid, 'name':name, 'city':city, 'pwd':password, 'crdate':date.today() })
             conn.commit()
-            print("Successfully Created",name,"User")
+            print("Successfully Created",uid,"User")
         else:
-            print("\nUser Already Exists\n")
+            print("\n",uid,"Already Exists\n")
             return start()
         # return user object
-        return User(uid, name)
+        return User(c, conn, uid, name)
     else:
         print("\nInvalid Option - Enter 1 or 2\n")
         return start()
-
 
 if __name__ == "__main__":
     # 1. Open database
@@ -73,8 +72,9 @@ if __name__ == "__main__":
     # 2. Create a cursor object
     c = conn.cursor()
 
-    user = start()
 
+    user = start()
+    user.menu()
     # c.execute(''' ''')
     # c.execute("SELECT * FROM movie WHERE movie_number=:num and year=:year",
     # {"num":movie_number, "year": movie_year} )
