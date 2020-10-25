@@ -1,6 +1,8 @@
 class User():
-    def __init__(self):
-        print("create new user")
+    def __init__(self, uid, name):
+        print("created",uid,name)
+        self.uid = uid
+        self.name = name
 
     def post(self):
         print("post a question")
