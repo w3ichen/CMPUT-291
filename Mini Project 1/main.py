@@ -17,7 +17,7 @@ def start():
     if option == "1":
         # registered user
         print("\n----Login----")
-        uid = input("User ID: ")
+        uid = input("User ID: ").lower()
         password = getpass()
         c.execute('SELECT * FROM users WHERE uid = :uid AND pwd = :pw;',
              { 'uid': uid, 'pw': password })
@@ -39,7 +39,7 @@ def start():
     elif option == "2":
         # unregistered user
         print("\n----Register----")
-        uid = input("Unique ID: ")
+        uid = input("Unique ID: ").lower()
         name = input("Name: ")
         city = input("City: ")
         password = getpass()
