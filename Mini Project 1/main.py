@@ -9,11 +9,6 @@ from getpass import getpass
 c = None
 conn = None
 
-def hash_password(password):
-    alg = hashlib.sha256()
-    alg.update(password.encode('utf-8'))
-    return alg.hexdigest()
-
 def start():
     print("Welcome to Reddit\n----Menu----")
     print("   1-Registered User")
@@ -25,7 +20,7 @@ def start():
         uid = input("User ID: ")
         password = getpass()
         c.execute('SELECT * FROM users WHERE uid = :uid AND pwd = :pw;',
-             { 'uid': uid, 'pw': hash_password(password) })
+             { 'uid': uid, 'pw': password })
         user = c.fetchone()
         if (user == None):
             print("\nInvalid User ID or Password\n")
@@ -47,7 +42,7 @@ def start():
         uid = input("Unique ID: ")
         name = input("Name: ")
         city = input("City: ")
-        password = hash_password(getpass())
+        password = getpass()
         # check that user does not exist
         c.execute('SELECT * FROM users WHERE uid=:uid;',{'uid':uid})
         if (c.fetchone() == None):
