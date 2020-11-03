@@ -1,4 +1,5 @@
 from datetime import date
+
 class User():
     def __init__(self, c, conn, uid, name):
         print("created uid of",uid)
@@ -18,7 +19,9 @@ class User():
         option = input("Option: ")
         if option=="1":
             #logout
-            print("LOGOUT")
+            print("\n Logged Out\n")
+            # jump out to main function
+            return None
         elif option=="2":
             self.conn.close()
             quit()
@@ -196,6 +199,8 @@ class User():
             self.c.execute('INSERT INTO votes(pid,vno,vdate,uid) VALUES(:pid,:vno,:vdate,:uid);',
                 {'pid':self.pid, 'vno':vno ,'vdate':date.today(), 'uid':self.uid})
             self.conn.commit()
+            print('\Voted on Post',self.pid,"\n")
+            self.postActionMenu()
         else:
             print('\nAlready Voted on Post',self.pid,"\n")
             self.postActionMenu()

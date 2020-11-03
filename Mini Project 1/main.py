@@ -67,18 +67,6 @@ if __name__ == "__main__":
     # 2. Create a cursor object
     c = conn.cursor()
 
-    user = start()
-    user.menu()
-    # c.execute(''' ''')
-    # c.execute("SELECT * FROM movie WHERE movie_number=:num and year=:year",
-    # {"num":movie_number, "year": movie_year} )
-    # conn.commit()
-    # row = c.fetchone()
-    # rows = c.fetchall()
-    # print(rows)
-    # for each in rows:
-    #     print(each["title"])
-
-
-
-    conn.close()
+    while True:
+        user = start()
+        user.menu()
