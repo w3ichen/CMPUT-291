@@ -87,7 +87,7 @@ class User():
         keywords = entry.split(' ')
         keywords[:] = [item for item in keywords if item != '']
 
-        find_matches = '''SELECT  c.Type, p.pid, p.pdate, p.title, p.body, p.poster, COALESCE(A.Num_of_Answers,0) AS Num_of_Answers, COALESCE(B.Total_Votes,0) AS Total_Votes
+        find_matches = '''SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) as SearchIndex, c.Type, p.pid, p.pdate, p.title, p.body, p.poster, COALESCE(A.Num_of_Answers,0) AS Num_of_Answers, COALESCE(B.Total_Votes,0) AS Total_Votes
                         FROM posts p
                         LEFT OUTER JOIN
                         (SELECT  'Answer' AS Type, a.pid
@@ -115,46 +115,50 @@ class User():
                         WHERE 
                         (lower(p.title) like '%{}%' or lower(p.body) like '%{}%' )
                         GROUP BY p.pid
-                        ORDER BY COUNT(p.pid) DESC
-                    '''.format(keywords[0],keywords[0],keywords[0])
+                        ORDER BY COUNT(p.pid) DESC;
+                    '''.format(keywords[0], keywords[0], keywords[0])
         ## NOT SURE HOW TO SEARCH MULTIPLE KEYWORDS
         self.c.execute(find_matches)
-        
+
         rows = self.c.fetchall()
-                
+
         output_array = []
         output_array = [list(i) for i in rows]
-        
-        if  len(output_array) == 0:
-            print('\n',"Sorry! There are no matches found\n")
+
+        if len(output_array) == 0:
+            print('\n', "Sorry! There are no matches found\n")
             self.menu()
-                
+
         for i in range(len(output_array)):
-            if i != 0 and i%5 == 0 :
-                inp_1 = input("\nEither select a post number or enter 'x' to see more posts\n")
+            if i != 0 and i % 5 == 0:
+                inp_1 = input("\nEither select a search index number or enter 'x' to see more posts\n")
                 inp_1.lower()
+
                 if (inp_1 == "x"):
-                    print('\n',output_array[i],'\n')
-                
-                elif(inp_1.isdigit()):
-                    print("User has selected post #",inp_1,"\n")
-                    self.pid = int(inp_1)
-                    ##THIS DOESNT WORK -- need new way of finding the post number in output array 
-                    if output_array[int(inp_1)][0] == "Question":
+                    print('\n', output_array[i], '\n')
+
+                elif (inp_1.isdigit()):
+
+                    selected_post_id = output_array[int(inp_1) - 1][2]
+                    print("User has selected post #", selected_post_id, "\n")
+                    self.pid = int(selected_post_id)
+
+                    if output_array[int(inp_1) - 1][1] == "Question":
                         self.isQuestion = True
                     else:
                         self.isQuestion = False
                     self.postActionMenu()
             else:
-                print('\n',output_array[i])
-                
-        inp_1 = input("Please select a post number\n")
+                print('\n', output_array[i])
+
+        inp_1 = input("Please select a post using the search index number\n")
         inp_1.lower()
         if (inp_1.isdigit()):
-            print("User has selected post #",inp_1,"\n")
-            self.pid = int(inp_1)
-            ##THIS DOESNT WORK -- need new way of finding the post number in output array 
-            if output_array[int(inp_1)][0] == "Question":
+            selected_post_id = output_array[int(inp_1) - 1][2]
+            print("User has selected post #", selected_post_id, "\n")
+            self.pid = int(selected_post_id)
+
+            if output_array[int(inp_1) - 1][1] == "Question":
                 self.isQuestion = True
             else:
                 self.isQuestion = False
