@@ -2,7 +2,7 @@ from datetime import date
 
 class User():
     def __init__(self, c, conn, uid, name):
-        print("created uid of",uid)
+        print("\nWelcome",uid)
         self.c = c
         self.conn = conn
         self.uid = uid
@@ -64,8 +64,8 @@ class User():
         print("\n -----Post a Question-----")
         self.c.execute('SELECT COALESCE(MAX(pid),0) FROM posts;')
         pid = int(self.c.fetchone()[0])+1
-        title = input("Please enter a title: ")
-        body = input("Please enter the body of your post: ")
+        title = input("Enter Title: ")
+        body = input("Enter Body: ")
         poster_id = self.uid
 
         self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
@@ -77,12 +77,12 @@ class User():
         { 'pid':pid })
         
         self.conn.commit()
-        print("Your question has been posted")
+        print("\nYour question has been posted\n")
         self.menu()
 
     def search(self):
         print("\n -----Search for posts-----")
-        entry = input("Please enter a keyword! \n")
+        entry = input("Please enter a keyword: \n")
         entry.lower()
         keywords = entry.split(' ')
         keywords[:] = [item for item in keywords if item != '']

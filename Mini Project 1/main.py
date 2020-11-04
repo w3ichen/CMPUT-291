@@ -4,6 +4,7 @@ import hashlib
 from User import User
 from Privileged import Privileged
 from getpass import getpass
+import sys
 
 # cusor and connection global variables
 c = None
@@ -62,8 +63,13 @@ def start():
 
 if __name__ == "__main__":
     # 1. Open database
-    databse = input("Open database: ")
-    conn = sqlite3.connect(databse)
+    # database is passed in command line: python main.py data.db
+    try:
+        database = sys.argv[1]
+    except:
+        print("Missing Database Name, try: python main.py data.db")
+        quit()
+    conn = sqlite3.connect(database)
     # 2. Create a cursor object
     c = conn.cursor()
 
