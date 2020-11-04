@@ -48,13 +48,84 @@ class Privileged(User):
             return self.menu()
 
     def accept(self):
-        print("accept post as answer")
+        print("\n -----Accepted Answer-----")
+        theaid = self.pid
+        self.c.execute("SELECT qid FROM answers WHERE pid = " + str(theaid) + ";")
+        qid = self.c.fetchone()[0]
+
+        self.c.execute("SELECT theaid FROM questions WHERE pid=:qid", {"qid": qid})
+
+        if self.c.fetchone() is None:
+
+            user_ans = input("Would you like to accept this answer? [Y,N]: ")
+
+            if user_ans.lower() == 'y':
+                self.c.execute('UPDATE questions SET theaid=:theaid WHERE pid=:qid',
+                               {'theaid': theaid, 'qid': qid})
+                self.conn.commit()
+                print('\nSuccessfully Accepted Answer', theaid, "\n")
+            elif user_ans.lower() == 'n':
+                print("\nAnswer will not become accepted answer\n")
+                return self.menu()
+            else:
+                print("\n* Choose valid input *\n")
+                return self.accept()
+
+        else:
+            print("An accepted answer already exists...\n")
+            user_ans = input("Would you like to replace it with current answer? [Y,N]: ")
+            if user_ans.lower() == 'y':
+                self.c.execute('UPDATE questions SET theaid=:theaid WHERE pid=:qid',
+                               {'theaid': theaid, 'qid': qid})
+                self.conn.commit()
+                print('\nSuccessfully Accepted Answer', theaid, "\n")
+            elif user_ans.lower() == 'n':
+                print("\nAccepted answer will not be changed\n")
+                return self.menu()
+            else:
+                print("\n* Choose valid input *\n")
+                return self.accept()
+
+        return self.menu()
 
     def badge(self):
         print("give a badge")
     
     def tag(self):
-        print("give tag")
+        print("\n -----Add a Tag-----")
+        pid = self.pid
+        self.c.execute('SELECT tag FROM tags WHERE pid=:pid', {'pid': pid})
+        curr_tag = self.c.fetchone()
+        cont = True
+
+        # tag_pid = self.c.fetchone()[0]
+        if curr_tag is None:
+            tag_in = input("What tag would you like to add? ")
+            self.c.execute('''INSERT INTO tags(pid,tag) 
+                    VALUES(:pid, :tag);''',
+                           {'pid': pid, 'tag': tag_in})
+            self.conn.commit()
+            print('\nSuccessfully Added Tag:', tag_in, "\n")
+        else:
+            tag_in = input("What tag would you like to add? ")
+            if tag_in.lower() in curr_tag:
+                print("\nThis tag already exists! Please try again\n")
+            else:
+                self.c.execute('UPDATE tags SET tag=:tag WHERE pid=:pid',
+                               {'tag': tag_in, 'pid': pid})
+                self.conn.commit()
+                print('\nSuccessfully Added Tag', tag_in, "\n")
+
+        user_cont = input("\nWould you like to add another tag? [Y,N]: ")
+        while cont:
+            if user_cont.lower() == 'y':
+                return self.tag()
+            elif user_cont.lower() == 'n':
+                cont = False
+            else:
+                print("\nInvalid Input!")
+
+        return self.menu()
     
     '''
         Post Action-Edit. The user should be able to edit the title and/or the body of the post. 
