@@ -7,7 +7,7 @@ class User():
         self.conn = conn
         self.uid = uid
         self.name = name
-        self.pid = 'test1'
+        self.pid = None
         self.isQuestion = False
 
     def menu(self):
@@ -62,7 +62,8 @@ class User():
 
     def post(self):
         print("\n -----Post a Question-----")
-        self.c.execute('SELECT COALESCE(MAX(pid),0) FROM posts;')
+        # rowid is a unique integer auto generated for each row
+        self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
         pid = int(self.c.fetchone()[0])+1
         title = input("Enter Title: ")
         body = input("Enter Body: ")
@@ -158,7 +159,7 @@ class User():
         if (inp_1.isdigit() and int(inp_1) <= len(output_array)):
             selected_post_id = output_array[int(inp_1) - 1][2]
             print("User has selected post #", selected_post_id, "\n")
-            self.pid = int(selected_post_id)
+            self.pid = selected_post_id
 
             if output_array[int(inp_1) - 1][1] == "Question":
                 self.isQuestion = True
@@ -172,12 +173,11 @@ class User():
     def answer(self):
         print("\n -----Post an Answer-----")
         qid = self.pid
-        self.c.execute('SELECT COALESCE(MAX(pid),0) FROM posts;')
+        self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
         aid = int(self.c.fetchone()[0])+1
         title = input("Enter Title: ")
         body = input("Enter Body: ")
         poster_id = self.uid
-
         self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
         VALUES(:aid, :pdate, :title, :body, :poster);''',
         { 'aid':aid, 'pdate':date.today(), 'title':title, 'body':body, 'poster':poster_id })
