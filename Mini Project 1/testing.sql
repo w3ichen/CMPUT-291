@@ -1,4 +1,4 @@
-SELECT  c.Type, p.pid, p.pdate, p.title, p.body, p.poster, COALESCE(A.Num_of_Answers,0) AS Num_of_Answers, COALESCE(B.Total_Votes,0) AS Total_Votes
+SELECT ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) as SearchIndex, c.Type, p.pid, p.pdate, p.title, p.body, p.poster, COALESCE(A.Num_of_Answers,0) AS Num_of_Answers, COALESCE(B.Total_Votes,0) AS Total_Votes
 FROM posts p
 LEFT OUTER JOIN
 (SELECT  'Answer' AS Type, a.pid
@@ -22,8 +22,8 @@ LEFT OUTER JOIN
 (SELECT p3.pid AS test
 FROM posts p3, tags t
 WHERE p3.pid = t.pid
-AND lower(t.tag)  like'%whatup%' as C on C.test = p.pid
+AND lower(t.tag) like '%dog%' or lower(t.tag)like'%whatup%') as C on C.test = p.pid
 WHERE 
-(lower(p.title)  IN ('%whatup%','%dog%') or lower(p.body) like '%whatup%' )
+(lower(p.title) like '%dog%' or lower(p.body) like '%dog%' )
 GROUP BY p.pid
 ORDER BY COUNT(p.pid) DESC;

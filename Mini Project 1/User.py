@@ -116,7 +116,9 @@ class User():
                         (lower(p.title) like '%{}%' or lower(p.body) like '%{}%' )
                         GROUP BY p.pid
                         ORDER BY COUNT(p.pid) DESC;
-                    '''.format(keywords[0], keywords[0], keywords[0])
+                    '''.format('%\' OR lower(t.tag) like \'%'.join(keywords), 
+                               '%\' OR lower(p.title) like \'%'.join(keywords),
+                               '%\' OR lower(p.body) like \'%'.join(keywords))
         ## NOT SURE HOW TO SEARCH MULTIPLE KEYWORDS
         self.c.execute(find_matches)
 
@@ -126,7 +128,7 @@ class User():
         output_array = [list(i) for i in rows]
 
         if len(output_array) == 0:
-            print('\n', "Sorry! There are no matches found\n")
+            print('\nSorry! There are no matches found\n')
             self.menu()
 
         for i in range(len(output_array)):
@@ -153,7 +155,7 @@ class User():
 
         inp_1 = input("Please select a post using the search index number\n")
         inp_1.lower()
-        if (inp_1.isdigit()):
+        if (inp_1.isdigit() and int(inp_1) <= len(output_array)):
             selected_post_id = output_array[int(inp_1) - 1][2]
             print("User has selected post #", selected_post_id, "\n")
             self.pid = int(selected_post_id)
@@ -163,14 +165,17 @@ class User():
             else:
                 self.isQuestion = False
             self.postActionMenu()
+        else:
+            print('\nInvalid Selection\n')
+            self.menu()
 
     def answer(self):
         print("\n -----Post an Answer-----")
         qid = self.pid
         self.c.execute('SELECT COALESCE(MAX(pid),0) FROM posts;')
         aid = int(self.c.fetchone()[0])+1
-        title = input("Please enter a title: ")
-        body = input("Please enter the body of your post: ")
+        title = input("Enter Title: ")
+        body = input("Enter Body: ")
         poster_id = self.uid
 
         self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
@@ -182,7 +187,7 @@ class User():
         { 'aid':aid, 'qid':qid })
             
         self.conn.commit()
-        print("Your answer has been recorded")
+        print("\nYour answer has been recorded\n")
         self.menu()
 
     '''
@@ -203,7 +208,7 @@ class User():
             self.c.execute('INSERT INTO votes(pid,vno,vdate,uid) VALUES(:pid,:vno,:vdate,:uid);',
                 {'pid':self.pid, 'vno':vno ,'vdate':date.today(), 'uid':self.uid})
             self.conn.commit()
-            print('\Voted on Post',self.pid,"\n")
+            print('\nVoted on Post',self.pid,"\n")
             self.postActionMenu()
         else:
             print('\nAlready Voted on Post',self.pid,"\n")
