@@ -12,10 +12,14 @@ conn = None
 
 def start():
     print("Welcome to Reddit\n----Menu----")
+    print("   0-Exit Program")
     print("   1-Registered User")
     print("   2-Unregistered User")
     option = input("Option: ")
-    if option == "1":
+    if option == "0":
+        conn.close()
+        quit()
+    elif option == "1":
         # registered user
         print("\n----Login----")
         uid = input("User ID: ").lower()
