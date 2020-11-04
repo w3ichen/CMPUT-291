@@ -141,7 +141,7 @@ class User():
                 inp_1.lower()
 
                 if (inp_1 == "x"):
-                    print('\n',i+1," - ", output_array[i], '\n')
+                    print('\n',i+1,"-", output_array[i], '\n')
 
                 elif (inp_1.isdigit() and int(inp_1) <= len(output_array)):
 
@@ -158,7 +158,7 @@ class User():
                     print('\nInvalid Selection\n')
                     return self.menu()
             else:
-                print('\n',i+1," - ", output_array[i])
+                print('\n',i+1,"-", output_array[i])
 
         inp_1 = input("Please select a post using the search index number\n")
         inp_1.lower()

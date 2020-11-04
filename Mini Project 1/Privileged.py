@@ -1,4 +1,5 @@
 # privileged user inherits User class
+from datetime import date
 from User import User
 class Privileged(User):
     def __init__(self, c, conn, uid, name):
@@ -87,57 +88,35 @@ class Privileged(User):
 
     def badge(self):
         print("\n -----Give a Badge-----")
-        uid = self.uid
-        # print(badge_in)
+        self.c.execute("SELECT poster FROM posts WHERE pid="+self.pid+";")
+        uid = self.c.fetchone()[0]
 
-        self.c.execute('SELECT uid FROM ubadges;')
+        self.c.execute("SELECT bname,type FROM badges;")
+        rows = self.c.fetchall()
 
-        if self.c.fetchone() is None:
-            self.c.execute("SELECT bname,type FROM badges;")
-            rows = self.c.fetchall()
+        badge_array = [list(i) for i in rows]
 
-            badge_array = [list(i) for i in rows]
+        if len(badge_array) == 0:
+            print('\nSorry, there seems to be no badges available...\n')
+            self.menu()
 
-            if len(badge_array) == 0:
-                print('\nSorry, there seems to be no badges available...\n')
-                self.menu()
+        for i in range(len(badge_array)):
+            print(badge_array[i], '\n')
 
-            for i in range(len(badge_array)):
-                print(badge_array[i], '\n')
-
-            badge_in = input("\nWhich badge would you like to give to user " + uid + "? ")
-            for i in range(len(badge_array)):
-                current = badge_array[i][0]
-                if badge_in.lower() == current.lower():
+        badge_in = input("\nEnter name of badge to give to user " + uid + "? ")
+        for i in range(len(badge_array)):
+            current = badge_array[i][0]
+            if badge_in.lower() == current.lower():
+                try:
                     self.c.execute('INSERT INTO ubadges(uid,bdate,bname) VALUES(:uid,:bdate,:bname);',
-                                   {'uid': uid, 'bdate': date.today(), 'bname': badge_in})
-                    self.conn.commit()
-                    print('\nBadge rewarded to', uid, "\n")
-
-        else:
-            badgesQuery = '''
-                SELECT b.bname, b.type
-                FROM badges b, ubadges u
-                WHERE u.uid=:uid AND u.bdate=:bdate
-                GROUP BY uid, bdate
-                HAVING count(*) = 1;
-                '''
-            self.c.execute(badgesQuery, {'uid': uid, 'bdate': date.today()})
-            rows = self.c.fetchall()
-            badge_array = [list(i) for i in rows]
-
-            if len(badge_array) == 0:
-                print('\nSorry, there seems to be no badges available...\n')
-                self.menu()
-
-            badge_in = input("\nWhich badge would you like to give to user " + uid + "? ")
-            for i in range(len(badge_array)):
-                current = badge_array[i][0]
-                if badge_in.lower() == current.lower():
-                    self.c.execute('INSERT INTO ubadges(uid,bdate,bname) VALUES(:pid,:bdate,:bname);',
-                                   {'uid': uid, 'bdate': date.today(), 'bname': badge_in})
-                    self.conn.commit()
-                    print('\nBadge rewarded to', uid, "\n")
+                                {'uid': uid, 'bdate': date.today(), 'bname': badge_in})
+                except:
+                    print('\n'+uid+' has already received a badge today\n')
+                    return self.menu()
+                self.conn.commit()
+                print('\nBadge rewarded to', uid, "\n")
+                return self.menu()
+        print('\nInvalid Badge Name\n')
 
         return self.menu()
     
