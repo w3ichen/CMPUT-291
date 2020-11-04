@@ -88,7 +88,7 @@ class Privileged(User):
 
     def badge(self):
         print("\n -----Give a Badge-----")
-        self.c.execute("SELECT poster FROM posts WHERE pid="+self.pid+";")
+        self.c.execute("SELECT poster FROM posts WHERE pid="+str(self.pid)+";")
         uid = self.c.fetchone()[0]
 
         self.c.execute("SELECT bname,type FROM badges;")
@@ -137,14 +137,14 @@ class Privileged(User):
             print('\nSuccessfully Added Tag:', tag_in, "\n")
         else:
             tag_in = input("What tag would you like to add? ")
-            if tag_in.lower() in curr_tag:
-                print("\nThis tag already exists! Please try again\n")
-            else:
+            try:
                 self.c.execute('''INSERT INTO tags(pid,tag) 
                     VALUES(:pid, :tag);''',
                            {'pid': pid, 'tag': tag_in})
                 self.conn.commit()
                 print('\nSuccessfully Added Tag', tag_in, "\n")
+            except:
+                print("\nThis tag already exists! Please try again\n")
 
         user_cont = input("\nWould you like to add another tag? [Y,N]: ")
         while cont:
