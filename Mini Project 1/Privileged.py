@@ -1,9 +1,11 @@
 # privileged user inherits User class
 from User import User
+
+
 class Privileged(User):
     def __init__(self, c, conn, uid, name):
         super().__init__(c, conn, uid, name)
-    
+
     def postActionMenu(self):
         if self.isQuestion:
             # post answer is only an option is selected post is a question
@@ -23,19 +25,19 @@ class Privileged(User):
             4-Add a tag
             5-Edit post
             6-Mark as accepted''')
-        print('Selected Post ID: ',self.pid)
+        print('Selected Post ID: ', self.pid)
         option = input("Option: ")
-        if option=="1":
+        if option == "1":
             return self.menu()
-        elif option=="2":
+        elif option == "2":
             return self.vote()
-        elif option=="3":
+        elif option == "3":
             return self.badge()
-        elif option=="4":
+        elif option == "4":
             return self.tag()
-        elif option=="5":
+        elif option == "5":
             return self.edit()
-        elif option=="6":
+        elif option == "6":
             if self.isQuestion:
                 return self.answer()
             else:
@@ -51,8 +53,8 @@ class Privileged(User):
         qid = self.c.fetchone()[0]
 
         self.c.execute("SELECT theaid FROM questions WHERE pid=:qid", {"qid": qid})
- 
-        if (self.c.fetchone() == None):
+
+        if self.c.fetchone() == None:
 
             user_ans = input("Would you like to accept this answer? [Y,N]: ")
 
@@ -87,7 +89,7 @@ class Privileged(User):
 
     def badge(self):
         print("give a badge")
-    
+
     def tag(self):
         print("\n -----Add a Tag-----")
         pid = self.pid
@@ -110,7 +112,7 @@ class Privileged(User):
             else:
                 self.c.execute('''INSERT INTO tags(pid,tag) 
                     VALUES(:pid, :tag);''',
-                           {'pid': pid, 'tag': tag_in})
+                               {'pid': pid, 'tag': tag_in})
                 self.conn.commit()
                 print('\nSuccessfully Added Tag', tag_in, "\n")
 
@@ -125,23 +127,23 @@ class Privileged(User):
                 break
 
         return self.menu()
-    
+
     '''
         Post Action-Edit. The user should be able to edit the title and/or the body of the post. 
         Other fields are not updated when a post is edited.
     '''
+
     def edit(self):
-        print("\nEdit Post",self.pid)
-        self.c.execute('SELECT title,body FROM posts WHERE pid=:pid',{'pid':self.pid})
+        print("\nEdit Post", self.pid)
+        self.c.execute('SELECT title,body FROM posts WHERE pid=:pid', {'pid': self.pid})
         old_post = self.c.fetchone()
         # change title and/or body, use or if user does not change field
         title = input("Update Title: ") or old_post[0]
         body = input("Update Body: ") or old_post[1]
         # update to database
         self.c.execute('UPDATE posts SET title=:title, body=:body WHERE pid=:pid',
-                {'title':title, 'body':body, 'pid':self.pid})
+                       {'title': title, 'body': body, 'pid': self.pid})
         self.conn.commit()
-        print('\nSuccessfully Updated Post',self.pid,"\n")
+        print('\nSuccessfully Updated Post', self.pid, "\n")
         # go back to menu
         return self.postActionMenu()
-        

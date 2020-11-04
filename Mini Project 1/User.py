@@ -1,8 +1,9 @@
 from datetime import date
 
+
 class User():
     def __init__(self, c, conn, uid, name):
-        print("\nWelcome",uid)
+        print("\nWelcome", uid)
         self.c = c
         self.conn = conn
         self.uid = uid
@@ -17,22 +18,22 @@ class User():
         3-Post a question
         4-Search for posts''')
         option = input("Option: ")
-        if option=="1":
-            #logout
+        if option == "1":
+            # logout
             print("\n Logged Out\n")
             # jump out to main function
             return None
-        elif option=="2":
+        elif option == "2":
             self.conn.close()
             quit()
-        elif option=="3":
+        elif option == "3":
             return self.post()
-        elif option=="4":
+        elif option == "4":
             return self.search()
         else:
             print("\nNot a Valid Option\n")
             return self.menu()
-    
+
     def postActionMenu(self):
         if self.isQuestion:
             # post answer is only an option is selected post is a question
@@ -44,13 +45,13 @@ class User():
             print('''Post Action--------
             1-Main Menu
             2-Vote on post''')
-        print('Selected Post ID: ',self.pid)
+        print('Selected Post ID: ', self.pid)
         option = input("Option: ")
-        if option=="1":
+        if option == "1":
             return self.menu()
-        elif option=="2":
+        elif option == "2":
             return self.vote()
-        elif option=="3":
+        elif option == "3":
             if self.isQuestion:
                 return self.answer()
             else:
@@ -64,19 +65,19 @@ class User():
         print("\n -----Post a Question-----")
         # rowid is a unique integer auto generated for each row
         self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
-        pid = int(self.c.fetchone()[0])+1
+        pid = int(self.c.fetchone()[0]) + 1
         title = input("Enter Title: ")
         body = input("Enter Body: ")
         poster_id = self.uid
 
         self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
         VALUES(:pid, :pdate, :title, :body, :poster);''',
-        { 'pid':pid, 'pdate':date.today(), 'title':title, 'body':body, 'poster':poster_id })
-        
+                       {'pid': pid, 'pdate': date.today(), 'title': title, 'body': body, 'poster': poster_id})
+
         self.c.execute('''INSERT INTO questions(pid) 
         VALUES(:pid);''',
-        { 'pid':pid })
-        
+                       {'pid': pid})
+
         self.conn.commit()
         print("\nYour question has been posted\n")
         return self.menu()
@@ -117,7 +118,7 @@ class User():
                         (lower(p.title) like '%{}%' or lower(p.body) like '%{}%' )
                         GROUP BY p.pid
                         ORDER BY COUNT(p.pid) DESC;
-                    '''.format('%\' OR lower(t.tag) like \'%'.join(keywords), 
+                    '''.format('%\' OR lower(t.tag) like \'%'.join(keywords),
                                '%\' OR lower(p.title) like \'%'.join(keywords),
                                '%\' OR lower(p.body) like \'%'.join(keywords))
         ## NOT SURE HOW TO SEARCH MULTIPLE KEYWORDS
@@ -177,18 +178,18 @@ class User():
         print("\n -----Post an Answer-----")
         qid = self.pid
         self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
-        aid = int(self.c.fetchone()[0])+1
+        aid = int(self.c.fetchone()[0]) + 1
         title = input("Enter Title: ")
         body = input("Enter Body: ")
         poster_id = self.uid
         self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
         VALUES(:aid, :pdate, :title, :body, :poster);''',
-        { 'aid':aid, 'pdate':date.today(), 'title':title, 'body':body, 'poster':poster_id })
+                       {'aid': aid, 'pdate': date.today(), 'title': title, 'body': body, 'poster': poster_id})
 
         self.c.execute('''INSERT INTO answers(pid,qid) 
         VALUES(:aid, :qid);''',
-        { 'aid':aid, 'qid':qid })
-            
+                       {'aid': aid, 'qid': qid})
+
         self.conn.commit()
         print("\nYour answer has been recorded\n")
         return self.menu()
@@ -198,21 +199,22 @@ class User():
         The vote should be recorded in the database with a vno assigned by your system, the vote date set to the 
         current date and the user id is set to the current user.
     '''
+
     def vote(self):
         # check that user has not already voted on the post
-        self.c.execute('SELECT * FROM votes WHERE pid=:pid AND uid=:uid',{'pid':self.pid, 'uid':self.uid})
-        if (self.c.fetchone() == None):
+        self.c.execute('SELECT * FROM votes WHERE pid=:pid AND uid=:uid', {'pid': self.pid, 'uid': self.uid})
+        if self.c.fetchone() == None:
             # has not voted
             # generate a unique vno
             self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM votes;')
-            vno = int(self.c.fetchone()[0])+1
- 
+            vno = int(self.c.fetchone()[0]) + 1
+
             # insert vote into database
             self.c.execute('INSERT INTO votes(pid,vno,vdate,uid) VALUES(:pid,:vno,:vdate,:uid);',
-                {'pid':self.pid, 'vno':vno ,'vdate':date.today(), 'uid':self.uid})
+                           {'pid': self.pid, 'vno': vno, 'vdate': date.today(), 'uid': self.uid})
             self.conn.commit()
-            print('\nVoted on Post',self.pid,"\n")
+            print('\nVoted on Post', self.pid, "\n")
             return self.postActionMenu()
         else:
-            print('\nAlready Voted on Post',self.pid,"\n")
+            print('\nAlready Voted on Post', self.pid, "\n")
             return self.postActionMenu()
