@@ -26,9 +26,9 @@ class User():
             self.conn.close()
             quit()
         elif option=="3":
-            self.post()
+            return self.post()
         elif option=="4":
-            self.search()
+            return self.search()
         else:
             print("\nNot a Valid Option\n")
             return self.menu()
@@ -47,12 +47,12 @@ class User():
         print('Selected Post ID: ',self.pid)
         option = input("Option: ")
         if option=="1":
-            self.menu()
+            return self.menu()
         elif option=="2":
-            self.vote()
+            return self.vote()
         elif option=="3":
             if self.isQuestion:
-                self.answer()
+                return self.answer()
             else:
                 print("\nNot a Valid Option\n")
                 return self.menu()
@@ -78,7 +78,7 @@ class User():
         
         self.conn.commit()
         print("\nYour question has been posted\n")
-        self.menu()
+        return self.menu()
 
     def search(self):
         print("\n -----Search for posts-----")
@@ -149,7 +149,7 @@ class User():
                         self.isQuestion = True
                     else:
                         self.isQuestion = False
-                    self.postActionMenu()
+                    return self.postActionMenu()
             else:
                 print('\n', output_array[i])
 
@@ -164,10 +164,10 @@ class User():
                 self.isQuestion = True
             else:
                 self.isQuestion = False
-            self.postActionMenu()
+            return self.postActionMenu()
         else:
             print('\nInvalid Selection\n')
-            self.menu()
+            return self.menu()
 
     def answer(self):
         print("\n -----Post an Answer-----")
@@ -188,7 +188,7 @@ class User():
             
         self.conn.commit()
         print("\nYour answer has been recorded\n")
-        self.menu()
+        return self.menu()
 
     '''
         Post action-Vote.The user should be able to vote on the post (if not voted already on the same post). 
@@ -209,9 +209,7 @@ class User():
                 {'pid':self.pid, 'vno':vno ,'vdate':date.today(), 'uid':self.uid})
             self.conn.commit()
             print('\nVoted on Post',self.pid,"\n")
-            self.postActionMenu()
+            return self.postActionMenu()
         else:
             print('\nAlready Voted on Post',self.pid,"\n")
-            self.postActionMenu()
-        
-
+            return self.postActionMenu()

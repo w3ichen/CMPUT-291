@@ -26,20 +26,20 @@ class Privileged(User):
         print('Selected Post ID: ',self.pid)
         option = input("Option: ")
         if option=="1":
-            self.menu()
+            return self.menu()
         elif option=="2":
-            self.vote()
+            return self.vote()
         elif option=="3":
-            self.accept()
+            return self.accept()
         elif option=="4":
-            self.badge()
+            return self.badge()
         elif option=="5":
-            self.tag()
+            return self.tag()
         elif option=="6":
-            self.edit()
+            return self.edit()
         elif option=="7":
             if self.isQuestion:
-                self.answer()
+                return self.answer()
             else:
                 print("\nNot a Valid Option\n")
                 return self.menu()
@@ -65,13 +65,13 @@ class Privileged(User):
         self.c.execute('SELECT title,body FROM posts WHERE pid=:pid',{'pid':self.pid})
         old_post = self.c.fetchone()
         # change title and/or body, use or if user does not change field
-        title = input("Title: ") or old_post[0]
-        body = input("Body: ") or old_post[1]
+        title = input("Update Title: ") or old_post[0]
+        body = input("Update Body: ") or old_post[1]
         # update to database
         self.c.execute('UPDATE posts SET title=:title, body=:body WHERE pid=:pid',
                 {'title':title, 'body':body, 'pid':self.pid})
         self.conn.commit()
         print('\nSuccessfully Updated Post',self.pid+"\n")
         # go back to menu
-        self.postActionMenu()
+        return self.postActionMenu()
         
