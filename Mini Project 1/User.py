@@ -140,10 +140,10 @@ class User():
                 if (inp_1 == "x"):
                     print('\n', output_array[i], '\n')
 
-                elif (inp_1.isdigit()):
+                elif (inp_1.isdigit() and int(inp_1) <= len(output_array)):
 
                     selected_post_id = output_array[int(inp_1) - 1][2]
-                    print("User has selected post #", selected_post_id, "\n")
+                    print("You have selected post ", selected_post_id, "\n")
                     self.pid = int(selected_post_id)
 
                     if output_array[int(inp_1) - 1][1] == "Question":
@@ -151,6 +151,9 @@ class User():
                     else:
                         self.isQuestion = False
                     return self.postActionMenu()
+                else:
+                    print('\nInvalid Selection\n')
+                    return self.menu()
             else:
                 print('\n', output_array[i])
 
@@ -201,7 +204,7 @@ class User():
         if (self.c.fetchone() == None):
             # has not voted
             # generate a unique vno
-            self.c.execute('SELECT COALESCE(MAX(vno),0) FROM votes;')
+            self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM votes;')
             vno = int(self.c.fetchone()[0])+1
  
             # insert vote into database

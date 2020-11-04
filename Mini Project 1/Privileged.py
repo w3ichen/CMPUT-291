@@ -10,19 +10,19 @@ class Privileged(User):
             print('''Post Action--------
             1-Main Menu
             2-Vote on post
-            3-Mark as accepted
-            4-Give a badge
-            5-Add a tag
-            6-Edit post
-            7-Post an answer''')
+            3-Give a badge
+            4-Add a tag
+            5-Edit post
+            6-Post an answer''')
         else:
+            # is an answer
             print('''Post Action--------
             1-Main Menu
             2-Vote on post
-            3-Mark as accepted
-            4-Give a badge
-            5-Add a tag
-            6-Edit post''')
+            3-Give a badge
+            4-Add a tag
+            5-Edit post
+            6-Mark as accepted''')
         print('Selected Post ID: ',self.pid)
         option = input("Option: ")
         if option=="1":
@@ -30,19 +30,16 @@ class Privileged(User):
         elif option=="2":
             return self.vote()
         elif option=="3":
-            return self.accept()
-        elif option=="4":
             return self.badge()
-        elif option=="5":
+        elif option=="4":
             return self.tag()
-        elif option=="6":
+        elif option=="5":
             return self.edit()
-        elif option=="7":
+        elif option=="6":
             if self.isQuestion:
                 return self.answer()
             else:
-                print("\nNot a Valid Option\n")
-                return self.menu()
+                return self.accept()
         else:
             print("\nNot a Valid Option\n")
             return self.menu()
@@ -54,8 +51,8 @@ class Privileged(User):
         qid = self.c.fetchone()[0]
 
         self.c.execute("SELECT theaid FROM questions WHERE pid=:qid", {"qid": qid})
-
-        if self.c.fetchone() is None:
+ 
+        if (self.c.fetchone() == None):
 
             user_ans = input("Would you like to accept this answer? [Y,N]: ")
 
@@ -111,8 +108,9 @@ class Privileged(User):
             if tag_in.lower() in curr_tag:
                 print("\nThis tag already exists! Please try again\n")
             else:
-                self.c.execute('UPDATE tags SET tag=:tag WHERE pid=:pid',
-                               {'tag': tag_in, 'pid': pid})
+                self.c.execute('''INSERT INTO tags(pid,tag) 
+                    VALUES(:pid, :tag);''',
+                           {'pid': pid, 'tag': tag_in})
                 self.conn.commit()
                 print('\nSuccessfully Added Tag', tag_in, "\n")
 
@@ -124,6 +122,7 @@ class Privileged(User):
                 cont = False
             else:
                 print("\nInvalid Input!")
+                break
 
         return self.menu()
     
@@ -142,7 +141,7 @@ class Privileged(User):
         self.c.execute('UPDATE posts SET title=:title, body=:body WHERE pid=:pid',
                 {'title':title, 'body':body, 'pid':self.pid})
         self.conn.commit()
-        print('\nSuccessfully Updated Post',self.pid+"\n")
+        print('\nSuccessfully Updated Post',self.pid,"\n")
         # go back to menu
         return self.postActionMenu()
         
