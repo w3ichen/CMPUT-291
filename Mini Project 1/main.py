@@ -4,15 +4,11 @@ import hashlib
 from User import User
 from Privileged import Privileged
 from getpass import getpass
+import sys
 
 # cusor and connection global variables
 c = None
 conn = None
-
-def hash_password(password):
-    alg = hashlib.sha256()
-    alg.update(password.encode('utf-8'))
-    return alg.hexdigest()
 
 def start():
     print("Welcome to Reddit\n----Menu----")
@@ -22,10 +18,10 @@ def start():
     if option == "1":
         # registered user
         print("\n----Login----")
-        uid = input("User ID: ")
+        uid = input("User ID: ").lower()
         password = getpass()
         c.execute('SELECT * FROM users WHERE uid = :uid AND pwd = :pw;',
-             { 'uid': uid, 'pw': hash_password(password) })
+             { 'uid': uid, 'pw': password })
         user = c.fetchone()
         if (user == None):
             print("\nInvalid User ID or Password\n")
@@ -44,10 +40,10 @@ def start():
     elif option == "2":
         # unregistered user
         print("\n----Register----")
-        uid = input("Unique ID: ")
+        uid = input("Unique ID: ").lower()
         name = input("Name: ")
         city = input("City: ")
-        password = hash_password(getpass())
+        password = getpass()
         # check that user does not exist
         c.execute('SELECT * FROM users WHERE uid=:uid;',{'uid':uid})
         if (c.fetchone() == None):
@@ -67,24 +63,16 @@ def start():
 
 if __name__ == "__main__":
     # 1. Open database
-    databse = input("Open database: ")
-    conn = sqlite3.connect(databse)
+    # database is passed in command line: python3 main.py data.db (must be python3)
+    try:
+        database = sys.argv[1]
+    except:
+        print("Missing Database Name, try: python3 main.py data.db")
+        quit()
+    conn = sqlite3.connect(database)
     # 2. Create a cursor object
     c = conn.cursor()
 
-
-    user = start()
-    user.menu()
-    # c.execute(''' ''')
-    # c.execute("SELECT * FROM movie WHERE movie_number=:num and year=:year",
-    # {"num":movie_number, "year": movie_year} )
-    # conn.commit()
-    # row = c.fetchone()
-    # rows = c.fetchall()
-    # print(rows)
-    # for each in rows:
-    #     print(each["title"])
-
-
-
-    conn.close()
+    while True:
+        user = start()
+        user.menu()

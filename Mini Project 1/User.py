@@ -1,12 +1,13 @@
 from datetime import date
+
 class User():
     def __init__(self, c, conn, uid, name):
-        print("created uid of",uid)
+        print("\nWelcome",uid)
         self.c = c
         self.conn = conn
         self.uid = uid
         self.name = name
-        self.pid = 'test1'
+        self.pid = None
         self.isQuestion = False
 
     def menu(self):
@@ -18,14 +19,16 @@ class User():
         option = input("Option: ")
         if option=="1":
             #logout
-            print("LOGOUT")
+            print("\n Logged Out\n")
+            # jump out to main function
+            return None
         elif option=="2":
             self.conn.close()
             quit()
         elif option=="3":
-            self.post()
+            return self.post()
         elif option=="4":
-            self.search()
+            return self.search()
         else:
             print("\nNot a Valid Option\n")
             return self.menu()
@@ -44,12 +47,12 @@ class User():
         print('Selected Post ID: ',self.pid)
         option = input("Option: ")
         if option=="1":
-            self.menu()
+            return self.menu()
         elif option=="2":
-            self.vote()
+            return self.vote()
         elif option=="3":
             if self.isQuestion:
-                self.answer()
+                return self.answer()
             else:
                 print("\nNot a Valid Option\n")
                 return self.menu()
@@ -58,16 +61,140 @@ class User():
             return self.menu()
 
     def post(self):
-        print("post a question")
+        print("\n -----Post a Question-----")
+        # rowid is a unique integer auto generated for each row
+        self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
+        pid = int(self.c.fetchone()[0])+1
+        title = input("Enter Title: ")
+        body = input("Enter Body: ")
+        poster_id = self.uid
+
+        self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
+        VALUES(:pid, :pdate, :title, :body, :poster);''',
+        { 'pid':pid, 'pdate':date.today(), 'title':title, 'body':body, 'poster':poster_id })
+        
+        self.c.execute('''INSERT INTO questions(pid) 
+        VALUES(:pid);''',
+        { 'pid':pid })
+        
+        self.conn.commit()
+        print("\nYour question has been posted\n")
+        return self.menu()
 
     def search(self):
-        print("search for posts")
-        # NEED TO UPDATE self.pid and self.isQuestion!!
-        # open menu for action on post
-        self.postActionMenu()
+        print("\n -----Search for posts-----")
+        entry = input("Please enter a keyword: \n")
+        entry.lower()
+        keywords = entry.split(' ')
+        keywords[:] = [item for item in keywords if item != '']
+
+        find_matches = """SELECT p.pid, c.Type, p.pdate, p.title, p.body, p.poster, COALESCE(A.Num_of_Answers,0) AS Num_of_Answers, COALESCE(B.Total_Votes,0) AS Total_Votes
+                        FROM posts p
+                        LEFT OUTER JOIN
+                        (SELECT  "Answer" AS Type, a.pid
+                        FROM answers a 
+                        UNION
+                        SELECT  "Question" AS Type, q.pid
+                        FROM questions q) as C on C.pid = p.pid
+                        LEFT OUTER JOIN
+                        (SELECT  p1.pid, COALESCE(COUNT(a1.qid),0) AS Num_of_Answers
+                        FROM posts p1, answers a1
+                        WHERE p1.pid = a1.qid
+                        GROUP BY (p1.pid)
+                        ) as A on A.pid = p.pid
+                        LEFT OUTER JOIN
+                        (SELECT  p2.pid,COUNT(v2.pid) AS Total_Votes
+                        FROM posts p2, votes v2
+                        WHERE p2.pid = v2.pid
+                        GROUP BY (p2.pid)
+                        ) as B on B.pid = p.pid
+                        LEFT OUTER JOIN
+                        (SELECT p3.pid AS test
+                        FROM posts p3, tags t
+                        WHERE p3.pid = t.pid
+                        AND lower(t.tag) like "%{}%") as C on C.test = p.pid
+                        WHERE 
+                        (lower(p.title) like "%{}%" or lower(p.body) like "%{}%" )
+                        GROUP BY p.pid
+                        ORDER BY COUNT(p.pid) DESC;
+                    """.format("%\" OR lower(t.tag) like \"%".join(keywords), 
+                               "%\" OR lower(p.title) like \"%".join(keywords),
+                               "%\" OR lower(p.body) like \"%".join(keywords))
+
+        self.c.execute(find_matches)
+
+        rows = self.c.fetchall()
+
+        output_array = []
+        output_array = [list(i) for i in rows]
+
+        if len(output_array) == 0:
+            print('\nSorry! There are no matches found\n')
+            self.menu()
+
+        headers = ["pid", "Type", "pdate","title","body","poster","Num_of_Answers","Total_Votes"]
+        print('\n',headers)
+
+        for i in range(len(output_array)):
+            if i != 0 and i % 5 == 0:
+                inp_1 = input("\nEither select a search index number or enter 'x' to see more posts\n")
+                inp_1.lower()
+
+                if (inp_1 == "x"):
+                    print('\n',i+1," - ", output_array[i], '\n')
+
+                elif (inp_1.isdigit() and int(inp_1) <= len(output_array)):
+
+                    selected_post_id = output_array[int(inp_1) - 1][0]
+                    print("You have selected post ", selected_post_id, "\n")
+                    self.pid = int(selected_post_id)
+
+                    if output_array[int(inp_1) - 1][1] == "Question":
+                        self.isQuestion = True
+                    else:
+                        self.isQuestion = False
+                    return self.postActionMenu()
+                else:
+                    print('\nInvalid Selection\n')
+                    return self.menu()
+            else:
+                print('\n',i+1," - ", output_array[i])
+
+        inp_1 = input("Please select a post using the search index number\n")
+        inp_1.lower()
+        if (inp_1.isdigit() and int(inp_1) <= len(output_array)):
+            selected_post_id = output_array[int(inp_1) - 1][0]
+            print("User has selected post #", selected_post_id, "\n")
+            self.pid = selected_post_id
+
+            if output_array[int(inp_1) - 1][1] == "Question":
+                self.isQuestion = True
+            else:
+                self.isQuestion = False
+            return self.postActionMenu()
+        else:
+            print('\nInvalid Selection\n')
+            return self.menu()
 
     def answer(self):
-        print("answer question")
+        print("\n -----Post an Answer-----")
+        qid = self.pid
+        self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM posts;')
+        aid = int(self.c.fetchone()[0])+1
+        title = input("Enter Title: ")
+        body = input("Enter Body: ")
+        poster_id = self.uid
+        self.c.execute('''INSERT INTO posts(pid,pdate,title,body,poster) 
+        VALUES(:aid, :pdate, :title, :body, :poster);''',
+        { 'aid':aid, 'pdate':date.today(), 'title':title, 'body':body, 'poster':poster_id })
+
+        self.c.execute('''INSERT INTO answers(pid,qid) 
+        VALUES(:aid, :qid);''',
+        { 'aid':aid, 'qid':qid })
+            
+        self.conn.commit()
+        print("\nYour answer has been recorded\n")
+        return self.menu()
 
     '''
         Post action-Vote.The user should be able to vote on the post (if not voted already on the same post). 
@@ -80,15 +207,15 @@ class User():
         if (self.c.fetchone() == None):
             # has not voted
             # generate a unique vno
-            self.c.execute('SELECT COALESCE(MAX(vno),0) FROM votes;')
+            self.c.execute('SELECT COALESCE(MAX(rowid),0) FROM votes;')
             vno = int(self.c.fetchone()[0])+1
  
             # insert vote into database
             self.c.execute('INSERT INTO votes(pid,vno,vdate,uid) VALUES(:pid,:vno,:vdate,:uid);',
                 {'pid':self.pid, 'vno':vno ,'vdate':date.today(), 'uid':self.uid})
             self.conn.commit()
+            print('\nSuccessfully Voted on Post',self.pid,"\n")
+            return self.postActionMenu()
         else:
             print('\nAlready Voted on Post',self.pid,"\n")
-            self.postActionMenu()
-        
-
+            return self.postActionMenu()
