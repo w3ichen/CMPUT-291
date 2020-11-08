@@ -55,7 +55,7 @@ class Privileged(User):
 
         if (self.c.fetchone() == (None,)):
 
-            user_ans = input("Would you like to accept this answer? [Y,N]: ")
+            user_ans = input("Would you like to accept this answer? [Y,N]: ").lower()
 
             if user_ans.lower() == 'y':
                 self.c.execute('UPDATE questions SET theaid=:theaid WHERE pid=:qid',
@@ -71,7 +71,7 @@ class Privileged(User):
 
         else:
             print("An accepted answer already exists...\n")
-            user_ans = input("Would you like to replace it with current answer? [Y,N]: ")
+            user_ans = input("Would you like to replace it with current answer? [Y,N]: ").lower()
             if user_ans.lower() == 'y':
                 self.c.execute('UPDATE questions SET theaid=:theaid WHERE pid=:qid',
                                {'theaid': theaid, 'qid': qid})
@@ -103,7 +103,7 @@ class Privileged(User):
         for i in range(len(badge_array)):
             print(badge_array[i], '\n')
 
-        badge_in = input("\nEnter name of badge to give to user " + uid + "? ")
+        badge_in = input("\nEnter name of badge to give to user " + uid + "? ").lower()
         for i in range(len(badge_array)):
             current = badge_array[i][0]
             if badge_in.lower() == current.lower():
@@ -129,14 +129,14 @@ class Privileged(User):
 
         # tag_pid = self.c.fetchone()[0]
         if curr_tag is None:
-            tag_in = input("What tag would you like to add? ")
+            tag_in = input("What tag would you like to add? ").lower()
             self.c.execute('''INSERT INTO tags(pid,tag) 
                     VALUES(:pid, :tag);''',
                            {'pid': pid, 'tag': tag_in})
             self.conn.commit()
             print('\nSuccessfully Added Tag:', tag_in, "\n")
         else:
-            tag_in = input("What tag would you like to add? ")
+            tag_in = input("What tag would you like to add? ").lower()
             try:
                 self.c.execute('''INSERT INTO tags(pid,tag) 
                     VALUES(:pid, :tag);''',
@@ -146,7 +146,7 @@ class Privileged(User):
             except:
                 print("\nThis tag already exists! Please try again\n")
 
-        user_cont = input("\nWould you like to add another tag? [Y,N]: ")
+        user_cont = input("\nWould you like to add another tag? [Y,N]: ").lower()
         while cont:
             if user_cont.lower() == 'y':
                 return self.tag()
