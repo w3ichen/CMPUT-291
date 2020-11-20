@@ -34,30 +34,42 @@ def extractTerms():
             for word in title_words:
                 if len(word) >= 3:
                     # if word is greater or equal to 3 characters in length, then add to set
-                    terms.add(word)
+                    terms.add(word.lower())
         if "Body" in post.keys():
             body_words = re.compile(separators).split(post["Body"])
             for word in body_words:
                 if len(word) >= 3:
                     # if word is greater or equal to 3 characters in length, then add to set
-                    terms.add(word)
+                    terms.add(word.lower())
     return list(terms)
 
 if __name__ == "__main__":
+
+    # python3 phase1.py <port>
+
     # connect to port
-    port = sys.argv[1]
-    client = MongoClient('mongodb://localhost:'+port)
+    try:
+        port = sys.argv[1]
+        client = MongoClient('mongodb://localhost:'+port)
+    except Exception:
+        print("Unable to connect to MongoDB")
+        print("Try: python3 phase1.py <port number>")
+        quit()
+    print("Connected to MongoDB Port",port)
     db = client["291db"]  
 
     # insert .json into mongodb
     # Tags.json
+    print("Reading and Inserting Tags.json")
     insertCollection("Tags")
     # Posts.json
+    print("Reading and Inserting Posts.json")
     insertCollection("Posts")
     # Votes.json
+    print("Reading and Inserting Votes.json")
     insertCollection("Votes")
 
-
+    print("Extracting Terms")
     # Extract terms and store into Posts
     db["Posts"].insert_one({"Id":"terms","_id":"terms","terms":extractTerms()})
 
