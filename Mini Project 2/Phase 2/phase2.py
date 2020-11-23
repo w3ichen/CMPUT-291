@@ -1,6 +1,9 @@
 import pymongo
 from pymongo import MongoClient
 import sys
+from datetime import datetime
+import re
+import json
 
 # global variables
 db = None
@@ -17,7 +20,87 @@ selected_post = None
 '''
 def post():
     global db, user_id, selected_post
+    #creating a dictionary to store the post details
+    post_dict = dict()
+
+    #user inputs
+    title = input("Please enter a title: ")
+    body = input("Body: ") 
+    tags = input("Please enter tags separated by a space.\nPress Enter if no tags applicable.\n")
     
+    #storing tags in a set to avoid duplicates
+    if tags == '':
+        tags = None
+    else:
+        temp_tags = tags.split(" ")
+        tag_list = []
+        #creating tags in the required format to insert into the dictionart 
+        for i in temp_tags:
+            tag_list.append("<" + i + ">")
+        tags = set(tag_list)
+        tag_input = ''.join(tags)
+
+    #finding the maximum ID to generate a new unique ID for the post
+    maxi = db["Posts"].aggregate([{ "$group" : { "_id": "null", "max": { "$max" : {"$toInt": "$Id"} }}}])
+    max_id = list(maxi)[0]["max"]
+    new_id = str(max_id + 1)
+
+    #inserting post details into the dictionary
+    post_dict["Id"] = new_id
+    post_dict["PostTypeId"] = "1" 
+    post_dict["CreationDate"] = (str(datetime.now())[0:10] + 'T' + str(datetime.now())[11:23])
+    post_dict["Score"] = 0
+    post_dict["ViewCount"] = 0
+    post_dict["Body"] = body
+    #user ID will only be added if it is provided
+    if user_id != None:
+        post_dict["OwnerUserId"] = str(user_id)
+    post_dict["Title"] = title
+    #tags will only be added if it is provided
+    if tags != None:
+            post_dict["Tags"] = tag_input
+    post_dict["AnswerCount"] = 0
+    post_dict["CommentCount"] = 0
+    post_dict["FavoriteCount"] = 0
+    post_dict["ContentLicense"] = "CC BY-SA 2.5"
+
+    #inserting the dictionary we just created into the database 
+    db.Posts.insert_one(post_dict)
+    
+    
+    tagz = None
+    if tags != None:
+        tagz = list(set(temp_tags))
+
+    #Adding tags to Tags collection (if they don't exist) or updating the count (if they do exists)
+    if tagz != None:
+        for tag in tagz:
+            tag_match = None
+            # the query between the ^ and $ char is for finding exact matches
+            tag_regex = re.compile('^' + re.escape(tag) + '$', re.IGNORECASE)
+            tag_match = db.Tags.find_one({"TagName": tag_regex})
+            #print(tag_match)
+            if tag_match != None:
+                db.Tags.update_one({"TagName": tag_regex}, {"$set" : {"Count": tag_match["Count"]+1}})
+                #tag_match = db.Tags.find_one({"TagName": tag_regex})
+                #print(tag_match)
+            else:
+                tag_dict = dict()
+                
+                max_t = db["Tags"].aggregate([{ "$group" : { "_id": "null", "max": { "$max" : {"$toInt": "$Id"} }}}])
+                max_tag = list(max_t)[0]["max"]
+                new_tag_id = str(max_tag + 1)    
+                            
+                tag_dict["Id"] = new_tag_id
+                tag_dict["TagName"] = tag
+                tag_dict["Count"] = 1
+                db.Tags.insert_one(tag_dict)
+                #tag_match = db.Tags.find_one({"TagName": tag_regex})
+                #print(tag_match)
+                
+    print("Your question has been posted!") 
+    
+    menu()
 
 '''
     Search for questions. The user should be able to provide one or more keywords, and the system should retrieve all posts that 
@@ -27,9 +110,85 @@ def post():
     After a question is selected, the view count of the question should increase by one (in Posts) and the user should be able to 
     perform a question action (as discussed next).
 '''
+#REMOVE LIMIT 3 BEFORE SUBMISSION!!!!                
+#Helper function to redundancy in the search function
+def searchHelper(column,keyword_regex): 
+    results = db.Posts.find({"$and": [{"PostTypeId": "1", column: keyword_regex}]}, ["Id"]).limit(3)
+    return results
 def search():
     global db, user_id, selected_post
     
+    #set where all the IDs of the search results are stored
+    search_ids = set()
+    
+    keywords = input("Please enter keywords to search separated by a space\n")
+    keywords = keywords.split(" ")
+    
+    #arrays to store keywords
+    greater_than_3 = []
+    less_than_3 = []
+    
+    #sorting keywords in different arrays based on length
+    for x in keywords:
+        if len(x) >= 3:
+            greater_than_3.append(x)
+        if len(x) < 3:
+            less_than_3.append(x)
+    
+    #local function to reduce complexity
+    #adds the search result (post IDs) to the set
+    def add_to_results(arr):
+        for x in arr:
+            search_ids.add(x["Id"])
+    
+    #searching keywords greater than 3 in terms array       
+    for x in greater_than_3:
+        keyword_regex = re.compile('^' + re.escape(x) + '$', re.IGNORECASE)
+        search_results = searchHelper("terms",keyword_regex)
+        add_to_results(search_results)
+
+    #searching keywords less than 3 in Title, Body, Tags collections
+    for x in less_than_3:
+        keyword_regex = re.compile('.*' + re.escape(x) + '.*', re.IGNORECASE)
+        
+        title_results = searchHelper("Title",keyword_regex)
+        add_to_results(title_results)
+        
+        body_results = searchHelper("Body",keyword_regex)
+        add_to_results(body_results)
+
+        tag_results = searchHelper("Tags",keyword_regex)
+        add_to_results(tag_results)
+       
+    print("Number of search results: " + str(len(search_ids)))
+    
+    #printing the search results
+    for n in search_ids:
+        final_results = db.Posts.find({"Id": n}, ["Id","Title","CreationDate", "Score","AnswerCount"])
+        for x in final_results:
+            x.pop("_id")
+            print("\n")
+            print(json.dumps(x, indent=4))
+    
+    #selecting a post        
+    selected_post = input("\n\nPlease type in a post ID to select a post\n")
+    if not selected_post.isdigit():
+        print("Invalid Post ID\nAborting")
+        return menu()
+    
+    #printing the full post
+    full_post = db.Posts.find_one({"Id": selected_post},{"terms": False})
+    full_post.pop("_id")
+    print("\n")
+    print(json.dumps(full_post, indent=4,sort_keys=True))
+    
+    #updating the view count by adding one
+    post_match = db.Posts.find_one({"Id": selected_post})
+    db.Posts.update_one({"Id": selected_post}, {"$set" : {"ViewCount": post_match["ViewCount"]+1}})
+    
+    return action_menu()
+   
+
 
 '''
     Question action-Answer. The user should be able to answer the question by providing a text. An answer record should be 
@@ -98,7 +257,10 @@ def report():
         questions_score = 0
         for result in results:
             questions_score += result["Score"]
-        questions_score /= questions_count
+        if questions_count != 0:
+            questions_score /= questions_count
+        else:
+            questions_score = 0.0
 
         # (2) the number of answers owned and the average score for those answers
         results = Posts.find({"OwnerUserId":user_id, "PostTypeId":"2"})
@@ -106,7 +268,10 @@ def report():
         answers_score = 0
         for result in results:
             answers_score += result["Score"]
-        answers_score /= answers_count
+        if questions_count != 0:
+            answers_score /= answers_count
+        else:
+            answers_score = 0.0
 
         # (3) the number of votes registered for the user
         Votes = db["Votes"]
