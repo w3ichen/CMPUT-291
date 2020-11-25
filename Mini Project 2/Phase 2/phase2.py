@@ -98,9 +98,9 @@ def post():
                 #tag_match = db.Tags.find_one({"TagName": tag_regex})
                 #print(tag_match)
                 
-    print("Your question has been posted!") 
+    print("\nYour question has been posted!") 
     
-    menu()
+    return menu()
 
 '''
     Search for questions. The user should be able to provide one or more keywords, and the system should retrieve all posts that 
@@ -109,11 +109,13 @@ def post():
     and the answer count. The user should be able to select a question to see all fields of the question from Posts. 
     After a question is selected, the view count of the question should increase by one (in Posts) and the user should be able to 
     perform a question action (as discussed next).
-'''
-#REMOVE LIMIT 3 BEFORE SUBMISSION!!!!                
+'''            
 #Helper function to redundancy in the search function
 def searchHelper(column,keyword_regex): 
-    results = db.Posts.find({"$and": [{"PostTypeId": "1", column: keyword_regex}]}, ["Id"]).limit(3)
+    if column == "terms":
+        results = db.Posts.find({ column: { "$in": keyword_regex },"PostTypeId":"1" }, ["_id"])
+    else:
+        results = db.Posts.find({"PostTypeId": "1", "$or": [ {"Title": keyword_regex}, {"Body":keyword_regex}, {"Tags":keyword_regex} ]}, ["_id"])
     return results
 def search():
     global db, user_id, selected_post
@@ -139,54 +141,54 @@ def search():
     #adds the search result (post IDs) to the set
     def add_to_results(arr):
         for x in arr:
-            search_ids.add(x["Id"])
+            search_ids.add(x["_id"])
     
     #searching keywords greater than 3 in terms array       
-    for x in greater_than_3:
-        keyword_regex = re.compile('^' + re.escape(x) + '$', re.IGNORECASE)
-        search_results = searchHelper("terms",keyword_regex)
-        add_to_results(search_results)
+    keyword_regex = [word.lower() for word in greater_than_3]
+    search_results = searchHelper("terms",keyword_regex)
+    add_to_results(search_results)
 
     #searching keywords less than 3 in Title, Body, Tags collections
     for x in less_than_3:
         keyword_regex = re.compile('.*' + re.escape(x) + '.*', re.IGNORECASE)
         
-        title_results = searchHelper("Title",keyword_regex)
-        add_to_results(title_results)
-        
-        body_results = searchHelper("Body",keyword_regex)
-        add_to_results(body_results)
-
-        tag_results = searchHelper("Tags",keyword_regex)
-        add_to_results(tag_results)
-       
-    print("Number of search results: " + str(len(search_ids)))
-    
+        less_results = searchHelper("Title",keyword_regex)
+        add_to_results(less_results)
+ 
+          
     #printing the search results
     for n in search_ids:
-        final_results = db.Posts.find({"Id": n}, ["Id","Title","CreationDate", "Score","AnswerCount"])
+        final_results = db.Posts.find({"_id": n}, ["Id","Title","CreationDate", "Score","AnswerCount"])
         for x in final_results:
             x.pop("_id")
             print("\n")
             print(json.dumps(x, indent=4))
+    print("Number of search results: " + str(len(search_ids)))
     
     #selecting a post        
-    selected_post = input("\n\nPlease type in a post ID to select a post\n")
-    if not selected_post.isdigit():
-        print("Invalid Post ID\nAborting")
+    if (len(search_ids) != 0):
+        selected_post = input("\n\nPlease type in a post ID to select a post\n")
+        if not selected_post.isdigit():
+            print("Invalid Post ID\nAborting")
+            return menu()
+    
+        #printing the full post
+        full_post = db.Posts.find_one({"Id": selected_post},{"terms": False})
+        try:
+            full_post.pop("_id")
+        except Exception:
+            print("Invalid ID, Aborting")
+            return menu()
+        print("\n")
+        print(json.dumps(full_post, indent=4,sort_keys=True))
+        
+        #updating the view count by adding one
+        post_match = db.Posts.find_one({"Id": selected_post})
+        db.Posts.update_one({"Id": selected_post}, {"$set" : {"ViewCount": post_match["ViewCount"]+1}})
+        return action_menu()
+    else:
         return menu()
     
-    #printing the full post
-    full_post = db.Posts.find_one({"Id": selected_post},{"terms": False})
-    full_post.pop("_id")
-    print("\n")
-    print(json.dumps(full_post, indent=4,sort_keys=True))
-    
-    #updating the view count by adding one
-    post_match = db.Posts.find_one({"Id": selected_post})
-    db.Posts.update_one({"Id": selected_post}, {"$set" : {"ViewCount": post_match["ViewCount"]+1}})
-    
-    return action_menu()
    
 
 
@@ -201,6 +203,40 @@ def search():
 def answer():
     global db, user_id, selected_post
     
+    #store answer info into a dictionary
+    ans_dict = dict()
+
+    print("\nAnswer Selected Question\n")
+
+    #get user input for answer body text
+    answer = input("Please enter an answer to selected question: ")
+
+    #find max ID then generate new unique ID for the answer
+    init_max = db["Posts"].aggregate([{ "$group" : { "_id": "null", "max": { "$max" : {"$toInt": "$Id"} }}}])
+    max_id = list(init_max)[0]["max"]
+    new_id = str(max_id + 1)
+
+    #store answer details into the dictionary
+    ans_dict["Id"] = new_id
+    ans_dict["PostTypeId"] = "2"
+    ans_dict["ParentID"] = selected_post
+    ans_dict["CreationDate"] = (str(datetime.now())[0:10] + 'T' + str(datetime.now())[11:23])
+    ans_dict["Score"] = 0
+    ans_dict["Body"] = answer  
+
+    #store user id if given
+    if user_id != None:
+        ans_dict["OwnerUserId"] = str(user_id)
+    
+    ans_dict["CommentCount"] = 0
+    ans_dict["ContentLicense"] = "CC BY-SA 2.5"
+
+    #insert answer dictionary into database
+    db.Posts.insert_one(ans_dict)
+
+    print("\nYour answer has been posted!\n") 
+    
+    return menu()
 
 '''
     Question action-List answers. The user should be able to see all answers of a selected question. If an answer is marked as the 
@@ -211,7 +247,58 @@ def answer():
 '''
 def list_answers():
     global db, user_id, selected_post
+
+    print("\nAll answers for post id", selected_post, "\n")
+
+    #get results_answer where selected_post id is the same as ParentId
+    result_answer = db.Posts.find({"ParentId": selected_post}, ["Id","Body","CreationDate","Score"])
+
+    #check if there are answers to a post
+    if result_answer.count() == 0:
+        print("No answers found for post")
+        return action_menu()
+
+    # see if selected_post has an accepted answer
+    accepted_answer_id = None
+    the_post = db.Posts.find_one({"Id":selected_post})
+    if "AcceptedAnswerId" in the_post.keys():
+        # post has an accepted answer
+        accepted_answer_id = the_post["AcceptedAnswerId"]
+        the_answer = db.Posts.find_one({"Id":accepted_answer_id}, ["Id","Body","CreationDate","Score"])
+        body_desc = the_answer.pop("Body")
+        body_desc = body_desc[:80]
+        the_answer["Body"] = body_desc
+        the_answer.pop("_id")
+        print("\n* Accepted Answer *\n")
+        print(json.dumps(the_answer, indent=4))
+
+
+    #displaying info with body limited to 80 chars
+    for result in result_answer:
+        if result["Id"] != accepted_answer_id:
+            body_desc = result.pop("Body")
+            body_desc = body_desc[:80]
+            result["Body"] = body_desc
+            result.pop("_id")
+            print("\n")
+            print(json.dumps(result, indent=4))
+
+    #user selects answer
+    user_input = input("\nWhich answer would you like to select? ")
+    if not user_input.isdigit():
+        print("Invalid Post ID\n")
+        return menu()
     
+    #print out full info of selected_post
+    full_post = db.Posts.find_one({"Id": user_input},{"terms": False})
+    try:
+        full_post.pop("_id")
+    except Exception:
+        print("Invalid ID, Aborting")
+    print("\n")
+    print(json.dumps(full_post, indent=4, sort_keys=True))
+    selected_post = user_input
+    return action_menu()
 
 '''
     Question/Answer action-Vote. The user should be able to vote on the selected question or answer if not voted already on the same post 
@@ -223,6 +310,67 @@ def list_answers():
 def vote():
     global db, user_id, selected_post
     
+    #store vote info into a dictionary
+    vote_dict = dict()
+
+    #get user input to vote
+    user_input = input("\nWould you like to vote on this post [Y,N]? ")
+
+    #if user inputs 'y', continue
+    if user_input.lower() == 'y':
+        #check if user_id exists
+        if user_id != None:
+            votes = db.Votes.find({"UserId": user_id, "PostId":selected_post})
+
+            #check if user already voted on post
+            if votes.count()>0:
+                print("\nCannot vote on this post anymore...\n")
+            else:
+                init_max = db["Votes"].aggregate([{ "$group" : { "_id": "null", "max": { "$max" : {"$toInt": "$Id"} }}}])
+                max_id = list(init_max)[0]["max"]
+                new_id = str(max_id + 1)
+
+                vote_dict["Id"] = new_id
+                vote_dict["PostId"] = selected_post
+                vote_dict["VoteTypeId"] = '2'
+                vote_dict["UserId"] = user_id
+                vote_dict["CreationDate"] = (str(datetime.now())[0:10] + 'T' + str(datetime.now())[11:23])
+
+                #insert voter dictionary into database
+                db.Votes.insert_one(vote_dict)
+                #updating the score count by adding one
+                post_match = db.Posts.find_one({"Id": selected_post})
+                db.Posts.update_one({"Id": selected_post}, {"$set" : {"Score": post_match["Score"]+1}})
+
+                print("\nVoted on ",selected_post,"\n")
+
+        else:
+            init_max = db["Votes"].aggregate([{ "$group" : { "_id": "null", "max": { "$max" : {"$toInt": "$Id"} }}}])
+            max_id = list(init_max)[0]["max"]
+            new_id = str(max_id + 1)
+
+            vote_dict["Id"] = new_id
+            vote_dict["PostId"] = selected_post
+            vote_dict["VoteTypeId"] = '2'
+            vote_dict["UserId"] = user_id
+            vote_dict["CreationDate"] = (str(datetime.now())[0:10] + 'T' + str(datetime.now())[11:23])
+            #insert voter dictionary into database
+            db.Votes.insert_one(vote_dict)
+            #updating the score count by adding one
+            post_match = db.Posts.find_one({"Id": selected_post})
+            db.Posts.update_one({"Id": selected_post}, {"$set" : {"Score": post_match["Score"]+1}})
+
+            print("\nVoted on ",selected_post,"\n")
+    
+    #if user inputs 'n'
+    elif user_input.lower() == 'n':
+        print("\nVoting was cancelled...\n")
+        return menu()
+
+    else:
+        print("\nInvalid Input!\n")
+    
+    return action_menu()
 
 '''
     Your program should allow the users of the system to provide a user id (if they wish), which is a numeric field, formatted as 
@@ -252,7 +400,7 @@ def report():
         # Generate report
         Posts = db["Posts"]
         # (1) the number of questions owned and the average score for those questions
-        results = Posts.find({"OwnerUserId":user_id, "PostTypeId":"1"})
+        results = Posts.find({"OwnerUserId":user_id, "PostTypeId":"1"},["Score"])
         questions_count = results.count()
         questions_score = 0
         for result in results:
@@ -263,7 +411,7 @@ def report():
             questions_score = 0.0
 
         # (2) the number of answers owned and the average score for those answers
-        results = Posts.find({"OwnerUserId":user_id, "PostTypeId":"2"})
+        results = Posts.find({"OwnerUserId":user_id, "PostTypeId":"2"},["Score"])
         answers_count = results.count()
         answers_score = 0
         for result in results:
@@ -347,5 +495,19 @@ if __name__ == "__main__":
     print("Welcome to MongoDB Search Engine\n")
 
     db = client["291db"]  
+
+    # ask for user_id
+    print("Enter User ID (press Enter to skip):")
+    new_id = input("User ID: ")
+    if new_id == "":
+        menu()
+    try:
+        int(new_id) # check that it's an integer
+        user_id = new_id
+        report()
+    except Exception:
+        print("\nInvalid User ID\n")
+        menu()
+    
 
     menu()
